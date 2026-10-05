@@ -1,0 +1,9 @@
+node_modules
+data
+.env
+secrets
+*.html
+!index.html
+*.zip
+tests
+docs

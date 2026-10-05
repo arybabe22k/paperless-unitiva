@@ -1,0 +1,18 @@
+import {readFile,writeFile} from 'node:fs/promises';
+import {ensureProcessCodes} from './codes.js';
+import {seed,apps,profiles,courses} from './catalog.js';
+const css=await readFile('client/style.css','utf8');
+const rules=(await readFile('server/rules.js','utf8')).replaceAll('export ','');
+const uploadRules=(await readFile('server/uploads.js','utf8')).replaceAll('export ','');
+const adapter=await readFile('client/standalone-adapter.js','utf8');
+let client=await readFile('client/main.js','utf8');
+const institutionLogo=(await readFile('client/assets/unitiva-header.png')).toString('base64');
+client=client.replaceAll('/client/assets/unitiva-header.png','data:image/png;base64,'+institutionLogo);
+const start=client.indexOf('async function api('),end=client.indexOf('function toast(',start);
+client=client.slice(0,start)+"async function api(path,method='GET',body){return demoApi(path,method,body);}\n"+client.slice(end);
+const state=ensureProcessCodes(seed());state.audit=state.records.map(r=>({id:crypto.randomUUID(),actor:'Sistema UNITIVA',role:'SISTEMA',recordId:r.id,action:'Registo carregado no estado '+r.status,at:r.createdAt}));
+const stages={academico:['SECRETARIA_FACULDADE','SECRETARIA_CENTRAL','REGISTO_ACADEMICO','CHANCELARIA','AGUARDA_ASSINATURA'],financeiro:['EMITIDA','PAGAMENTO_REGISTADO'],rh:['DEPARTAMENTO','DIRECCAO','AGUARDA_ASSINATURA'],transporte:['PENDENTE','APROVADA','CONCLUIDA'],servicos:['ABERTA','ATRIBUIDA','CONCLUIDA'],biblioteca:['CATALOGADO']};
+const data='const initialDemo='+JSON.stringify(state)+';const demoApps='+JSON.stringify(apps)+';const demoProfiles='+JSON.stringify(profiles)+';const demoCourses='+JSON.stringify(courses)+';const demoStages='+JSON.stringify(stages)+';';
+const js=[data,rules,uploadRules,adapter,client].join('\n').replaceAll('</script','<\\/script');
+await writeFile('UniTiva_Paperless.html',`<!doctype html><html lang="pt-MZ"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>UniTiva Paperless</title><style>${css}</style></head><body><div id="root"></div><script type="module">${js}</script></body></html>`);
+console.log('Demonstração autónoma criada: UniTiva_Paperless.html');
